@@ -1,0 +1,56 @@
+{
+  "status": "DRAFT: OPEN VALUES MUST NOT BE TREATED AS FINAL",
+  "knowledge": {
+    "maxDistinctSkills": 30,
+    "maxCreditPerComputerSkillKill": 1,
+    "learningCurve": null,
+    "fadingAfterDays": null,
+    "forgottenAfterDays": null,
+    "voluntaryAbandonmentInSettlement": true,
+    "abandonmentResetsKnowledgeToLevel": 0,
+    "abandonmentClearsLearningProgress": true,
+    "abandonmentClearsFollow": true,
+    "abandonmentClearsSpellHotkeys": true,
+    "abandonmentRefundsSpentSkillPoints": false
+  },
+  "burden": {
+    "initialCap": 10,
+    "maxCap": 30,
+    "costPerSkill": 1,
+    "misfireMaxProbability": 0.5,
+    "capGrowthCurve": null
+  },
+  "mana": {
+    "baseNaturalRecoveryPerSecond": 0
+  },
+  "momentum": {
+    "characterWide": true,
+    "gainRule": null,
+    "maxValue": null,
+    "decayRule": null,
+    "manaRecoveryCurve": null,
+    "resetOnSettlement": true
+  },
+  "lootLoad": {
+    "dailyLimit": 200,
+    "resetTimezone": "UTC",
+    "resetHour": 0,
+    "rarityCosts": {
+      "Normal": 1,
+      "Magic": 3,
+      "Unique": 10
+    }
+  },
+  "hardcore": {
+    "deathDropEquippedFraction": 0.65,
+    "dropCountRounding": "stochastic",
+    "pact": {
+      "oncePerCharacter": true,
+      "serverRegistrationRequired": true,
+      "deadlineSeconds": null,
+      "lifeDrainPerSecond": null,
+      "attributeBuffs": null,
+      "manaRecoveryBuff": null
+    }
+  }
+}

@@ -4,7 +4,7 @@
 All paths below are **public upstream candidate files verified to exist in the public `diasurgical/DevilutionX` repository**, NOT a claim of stable functions or suitable insertion points. Codex MUST pin and inspect the actual revision before touching code. Current upstream changes over time.
 
 Upstream browse:
-- https://github.com/diasurgical/DevilutionX/blob/master/Source/monster.cpp — monster behavior/attacks; locate the **single semantic action execution** boundary (avoid multi-hit duplicate events)
+- https://github.com/diasurgical/DevilutionX/blob/master/Source/monster.cpp — monster behavior/attacks; locate actual action effect execution and mark per-Computer used Skill SET membership; no per-cast/missile counting
 - https://github.com/diasurgical/DevilutionX/blob/master/Source/player.cpp — player model, attributes, spell timing, class assumptions
 - https://github.com/diasurgical/DevilutionX/blob/master/Source/items.cpp — generation, spell book and consumable handling, ground item generation
 - https://github.com/diasurgical/DevilutionX/blob/master/Source/items.h — item serialization/misc IDs/requirements
@@ -17,7 +17,7 @@ Upstream browse:
 ## Phase 0 required audit report (`docs/UPSTREAM_AUDIT.md`, produced by Codex)
 1. Upstream Git SHA, release tag, build platform/toolchain, license notices; successful clean build/test.
 2. Actual Class/starting stats/max attribute cap/skill levels/level cap and character serialization fields; list confirmed symbols with file path and line ranges.
-3. Actual monster attack/cast boundaries; demonstrate a test Computer action where exactly one event can be added without changing original hit/damage/missiles.
+3. Actual monster attack/cast boundaries; demonstrate that actual use can add its mapped Skill ID to that Computer's observed set, with repeated casts and multi-projectile effects leaving the set unchanged.
 4. Engine spell/skill/Book/Scroll/Staff IDs and vanilla effective spell level calculation; identify which native skills have no grade and need mapping policy.
 5. How native multiplayer assigns monster spawn identity and syncs death/actions; determine whether source action events are emitted identically on multiple peers and select canonical dedup identity.
 6. Native save cadence and function(s), storage format and checksums; check whether auto-save writes spell hotkeys/levels and whether stash is shared, and prevent pending skill save leakage.

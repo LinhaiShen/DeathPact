@@ -9,26 +9,26 @@ Codex should complete one PR-sized milestone, test it, and report actual changed
 
 ## Phase 1 — Domain foundations with no invasive combat changes
 **Task P1-01**: Define common canonical IDs and config structure (`characterId`, `roomSessionId`, `computerSpawnId`, `skillId`, `itemId`, operationId`, `rulesetVersion`). Unit tests for IDs and retry idempotency.
-**Task P1-02**: Implement pure domain types/functions for Knowledge union/30 cap, `burdenCap`, Misfire hard-capped 50%, single Momentum, UTC Loot Load with rollover, Hardcore 65% randomized equipped-only selection. Keep compile-time or fixture tests independent of actual engine.
-**Acceptance:** table-driven invariants pass, especially Cap10 Burden11→10% and Burden>=15→50%; 30 distinct can be reduced by Settlement abandonment, with no separate outside-Settlement forgetting API; abandoned Skill Points are never refunded; sampling does not duplicate.
+**Task P1-02**: Pure domain tests for Computer observed Skill ID set and fixed Learning +1 on kill, Follow candidate, no hard 30-Skill limit (BurdenCap<=30; CurrentBurden>30 legal and invokes capped Misfire), uniform classless gameplay, vanilla Book +1/consumption, Momentum, Loot Load, HC drops.
+**Acceptance:** repeated Computer cast 1/10/100 times yields Learning +1 on kill, only for pre-Following Character; CurBurden 30->31->32 legal Over-Burden/Misfire capped50%; Book may acquire new Skill at Burden30+. Internal HeroClasses use identical rules; abandonment does not refund Points.
 
 ## Phase 2 — Central persistence skeleton (single service)
 **Task P2-01**: Account auth, Character creation / login, public tag, status, revisioned committed save; DB migrations and ownership rules.
-**Task P2-02**: Item Registry + atomic item move; Loot Load ledger on direct Computer-drop pickup; Book use as an immediate atomic item-consumption/Knowledge transaction (current Lv1 grant; OPEN-09 +1-level-per-Book proposal awaits owner confirmation). Implement minimal central API client in desktop fork.
+**Task P2-02**: Item Registry and atomic transfers, UTC Loot Load, native Book consume-one/true Level+1 as immediate server transaction; other/new Skills allowed at Burden>=30. Deny ineffective already-maxed same-Spell book only.
 **Task P2-03**: Native Save adapter for attributes, level, inventory, equipment, stash; build manifest/hash checkpoints (login, entering combat zone, settlement, reconnect). Clearly label security limits.
 **Acceptance:** stale revision, forged item ID, duplicate save request and concurrent pickup rejected; saved character restorable; changing local Pending Knowledge cannot push it via Native Save.
 
 ## Phase 3 — Actual-use Knowledge and Battle Settlement
-**Task P3-01**: Build verified action/spell → Skill ID/Level mapping table from Phase 0. Hook original monster action start/execution for **one** SkillUsedEvent per action (not per damage tick); no impact on original combat output.
-**Task P3-02**: On kill aggregate `(computerSpawnId, skillId)` once and grant candidate/progress to all current active party members. Persist **only as Pending**. Unit/integration tests with 1/2/4 players and two/ten casts by same Computer.
-**Task P3-03**: Follow choices, **voluntary skill abandonment**, and skill-point allocations in the same settlement UI; atomic `KNOWLEDGE_SETTLE` with abandonSkillIds, post-abandonment 30-cap validation, hotkey cleanup + idempotent status retrieval, no cancellation of Settlement, failure recovery, reset Momentum. Normal Death discards Pending; no loss of committed Knowledge except an explicitly selected and successfully committed skill abandonment.
-**Acceptance:** un-followed skill not retro-credited; follow then next kill credited; abandoned skill has Lv0/progress0/follow=false and released Burden/hotkeys after Settlement; reacquisition starts fresh, and previously spent Skill Points are not refunded; no network retry duplication or stale Native Save resurrection; settlement cannot be replaced by native save; a computer not actually using a Skill produces no candidate.
+**Task P3-01**: Verify actual executed Computer actions; map action context to canonical Skill ID and add to per-spawn usedSkillIds SET. Never count casts, missiles, hits or bearer level. Combat untouched.
+**Task P3-02**: On Computer death each observed mapped Skill gives exactly Pending Learning +1 to pre-Following eligible Character, candidate-only otherwise; dedup by room+spawn+Skill. Tests 1/2/4 players and 1/10/100 casts.
+**Task P3-03**: Settlement Follow choices, voluntary abandonment and Skill Point spending atomically/idempotently; recompute Burden with no hard 30-Skill validation, higher Burden invokes Misfire. Clear only learned-Spell hotkeys and never refund spent Skill Points.
+**Acceptance:** no retroactive Follow credit, next eligible kill +1; no 30-Skill cap, abandonment lowers Burden but not required for next Skill. No Knowledge/save replay/refund or network retry duplicates.
 
 ## Phase 4 — Burden, Momentum, forgetting / hotkeys
 **Task P4-01**: Compute union of Following/ Learned distinct skills, MAG-invested cap config; integrate one Misfire roll per legitimate learned-skill cast, charge Mana once, suppress effect.
 **Task P4-02**: Global Momentum increases with configured valid combat, regenerates Mana; baseline natural Mana regen=0, outside-combat decay and settlement reset. Leave native action speed untouched.
-**Task P4-03**: Hook existing memorized-Spell Hotkey slots to protect learned skills from time-based automatic forgetting; implement **Settlement-only** voluntary abandonment and clear only learned `SpellType::Spell` hotkeys/readied learned Spell on commit; preserve Scroll/Charges hotkeys with the same SpellID. Do not expose forgetting outside Settlement. Book is currently Lv1-only by KN-06; OPEN-09 proposes restoring vanilla +1 level per consumed Book, requiring owner approval and the same immediate server-atomic item/Knowledge transaction.
-**Acceptance:** Burden formulas; no side effects on vanilla cast frame rate, scroll/staff (until policy decided), damage/VFX when Misfire; multi-day clock tests and Hotkey protection against automatic forgetting; 30 max, ability to abandon one at Settlement and then acquire a new skill; no restoration of abandoned data.
+**Task P4-03**: Memorized Spell hotkeys protect from automatic forgetting; Settlement abandonment clears learned-Spell shortcuts only, preserves Scroll/Charges. Native Book consumption/+1 Level requires server atomic commit; allow other/new Skills at Burden>=30.
+**Acceptance:** Burden/Misfire soft cap despite CurrentBurden>30, no native attack timing changes, Hotkey protection and Scroll/Charges independence, Book/Follow acquisition at Burden30+, no refund after abandonment.
 
 ## Phase 5 — Multiplayer social/lobby and shared progression
 **Task P5-01**: Friends, public/private/friend room lists, invites, online status, chat; original TCP/ZeroTier session bridge with tests for join-in-progress and role.

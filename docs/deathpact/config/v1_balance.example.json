@@ -1,7 +1,6 @@
 {
   "status": "DRAFT: OPEN VALUES MUST NOT BE TREATED AS FINAL",
   "knowledge": {
-    "maxDistinctSkills": 30,
     "maxCreditPerComputerSkillKill": 1,
     "learningCurve": null,
     "fadingAfterDays": null,
@@ -11,14 +10,26 @@
     "abandonmentClearsLearningProgress": true,
     "abandonmentClearsFollow": true,
     "abandonmentClearsSpellHotkeys": true,
-    "abandonmentRefundsSpentSkillPoints": false
+    "abandonmentRefundsSpentSkillPoints": false,
+    "distinctSkillCountHardLimit": null,
+    "learningUnitsPerUsedSkillComputerKill": 1,
+    "allowAcquisitionAboveBurden30": true,
+    "book": {
+      "oneBookConsumedOneTrueLevel": true,
+      "maxSpellLevel": "native_MaxSpellLevel",
+      "otherSkillsAtBurden30Plus": true,
+      "noWastedBookAtMax": true,
+      "writeBoundary": "immediate_server_atomic"
+    }
   },
   "burden": {
     "initialCap": 10,
     "maxCap": 30,
     "costPerSkill": 1,
     "misfireMaxProbability": 0.5,
-    "capGrowthCurve": null
+    "capGrowthCurve": null,
+    "softCapNotSkillCountLimit": true,
+    "allowCurrentBurdenAbove30": true
   },
   "mana": {
     "baseNaturalRecoveryPerSecond": 0
@@ -52,5 +63,15 @@
       "attributeBuffs": null,
       "manaRecoveryBuff": null
     }
+  },
+  "classless": {
+    "retainNativeHeroClass": true,
+    "classBasedGameplay": false,
+    "neutralStartingStats": null,
+    "neutralStatCaps": null,
+    "neutralLifeManaGrowth": null,
+    "neutralDamage": null,
+    "neutralWeaponRules": null,
+    "visualProfile": null
   }
 }

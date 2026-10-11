@@ -9,7 +9,7 @@ This is a **proposed** transport/domain contract; route names are not existing D
 | Movement/monster/combat | DevilutionX peers | no combat server authority | original networking |
 | Account, Character identity, lobby, mode | Central | DB | authenticated calls |
 | Stats, level, XP, inventory, equipment, stash | Original client during play | Central committed save+ledger | native Save + high-value mutation events |
-| Spell Book level result (currently Lv1-only, OPEN-09 proposal to use native +1 per Book) | Original item-use + sync adapter | DB Knowledge and item state | independent immediate atomic Book-consumption + level transaction; no combat Settlement |
+| Native Spell Book consume 1 -> true Level+1 | native item-use adapter | central Knowledge + Item Registry | immediate atomic; per-Spell original level max; OTHER/new Skills allowed at Burden30+ |
 | Kill-based skill discovery/progress and allocated Skill Points | Local Pending | DB committed Knowledge | **Battle Settlement only** |
 | Following choices and deliberate skill abandonment | Settlement UI/Pending | DB committed Follow / Knowledge | **Battle Settlement only** |
 | Momentum / combat-time Mana recovery | local live engine | no independent DB requirement | reset on Settlement; no mutation authority |
@@ -49,7 +49,7 @@ PactActivation(characterId UNIQUE, requestId, activatedAtUtc, inevitableDeathAtU
 AuditEvent(id, actionType, subjectId, reasonCode, observedAtUtc, sanitizedMetadata)
 ```
 
-Use relational foreign keys, unique `(characterId, skillId)` and unique mutation IDs; one registered item can have exactly one active placement/owner. The game may need more vanilla fields than shown: keep versioned opaque, validated native-save payload **in addition to normalized key fields**, not instead of original data.
+Use relational foreign keys, unique `(characterId, skillId)` and unique mutation IDs; one registered item can have exactly one active placement/owner. Apply one neutral gameplay ruleset regardless of internal HeroClass; no 30-distinct-Skill hard limit. The game may need more vanilla fields than shown: keep versioned opaque, validated native-save payload **in addition to normalized key fields**, not instead of original data.
 
 `Committed Character` (and equipment snapshot) is authoritative when logging in; a local cache is never a new source of truth.
 
@@ -72,6 +72,8 @@ Use relational foreign keys, unique `(characterId, skillId)` and unique mutation
 ```
 Server recomputes legal attribute-point budget and derived equipment stats (rather than trusting a displayed final STR), validates item IDs/positions/attributes, prevents state rollback. Reject or queue a conflict for reconciliation; never simply last-write-wins.
 
+### 3.2a Spell Book read: BOOK_READ(characterId,itemId,spellId,requestId,expectedRevisions) consumes one valid Book and increases true Spell Level +1 up to native MaxSpellLevel, with one immediate server-atomic item/Knowledge result. Other/new Skills allowed when Burden>=30; this increases Over-Burden, not denied. Already maxed SAME Spell cannot gain another level; do not waste Book. No auto-Follow or combat Pending.
+
 ### 3.2 Knowledge settlement
 ```json
 {
@@ -82,7 +84,7 @@ Server recomputes legal attribute-point budget and derived equipment stats (rath
   "roomSessionId": "session-id",
   "expectedKnowledgeRevision": 9,
   "claims": [
-    {"computerSpawnId": "monster-instance-a", "skillId": "firebolt", "bearerSkillLevel": 3,
+    {"computerSpawnId": "monster-instance-a", "skillId": "firebolt", "learningIncrement": 1,
      "killEventId": "kill-101"}
   ],
   "followChoices": ["firebolt"],
@@ -90,7 +92,7 @@ Server recomputes legal attribute-point budget and derived equipment stats (rath
   "pointAllocations": [{"skillId": "firebolt", "points": 2}]
 }
 ```
-Required validation: signed-in Character, correct room/mode and known session; dedup `(roomSessionId, computerSpawnId, skillId)`; skill mapping exists; sane levels and bounds; current Follow/skill capacity; available unspent Skill Points; expected revision and duplicate IDs. `abandonSkillIds` must be distinct IDs already Following or Learned, and cannot overlap with `followChoices` or `pointAllocations`. **In the same atomic Knowledge transaction**, delete abandoned skills' Follow/level/committed and pending progress, clear Fading state and memorized learned-Spell (`spellType=Spell`) Hotkey references / active readied learned Spell only (preserve same-spell Scroll/Charges hotkeys), and remove them from Burden/30-cap counting; discard any associated credit claims from that Settlement. Recalculate the 30-skill limit using the post-abandonment candidate set, so 30→29→30 is valid. Never refund any previously committed Skill Points spent on abandoned skills (`FROZEN`); preserve historical spend ledger and unspent-point balance across Settlement retries, Native Save, and re-learning. On retry, return exactly the previously committed outcome and never resurrect dropped progress/hotkeys. Server **cannot prove kills were real**: explicitly record low trust in audit; optional same-room peer digests add weak cross-checks only.
+Required validation: Computer used Skill is observed Boolean for that spawn; per kill grant exactly Learning +1 to pre-Following eligible Character, otherwise candidate-only, with NO cast/teacher-level weighting. Signed-in Character, correct room/mode and known session; dedup `(roomSessionId, computerSpawnId, skillId)`; skill mapping exists; sane levels and bounds; valid Follow/Skill IDs with NO hard 30-Skill count limit; available unspent Skill Points; expected revision and duplicate IDs. `abandonSkillIds` must be distinct IDs already Following or Learned, and cannot overlap with `followChoices` or `pointAllocations`. **In the same atomic Knowledge transaction**, delete abandoned skills' Follow/level/committed and pending progress, clear Fading state and memorized learned-Spell (`spellType=Spell`) Hotkey references / active readied learned Spell only (preserve same-spell Scroll/Charges hotkeys), and remove them from Burden (no hard 30-Skill cap); discard any associated credit claims from that Settlement. Recalculate CurrentBurden after Following/abandonment; skill #31+ is legal Over-Burden, not invalid. Never refund any previously committed Skill Points spent on abandoned skills (`FROZEN`); preserve historical spend ledger and unspent-point balance across Settlement retries, Native Save, and re-learning. On retry, return exactly the previously committed outcome and never resurrect dropped progress/hotkeys. Server **cannot prove kills were real**: explicitly record low trust in audit; optional same-room peer digests add weak cross-checks only.
 
 Server result includes `settlementId`, `CommittedKnowledgeRevision`, committed Follow/level/progress, **abandonedSkillIds, clearedHotkeyIndices**, skill points consumed, and `resetMomentum: true`. Record transaction before acknowledgement. If client crashes after send, `GET_SETTLEMENT_STATUS(settlementId)` returns durable result; never allow cancel after acceptance. If rejected, return reason and deterministic retry policy.
 

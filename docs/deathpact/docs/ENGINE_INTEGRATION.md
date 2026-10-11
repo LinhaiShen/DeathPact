@@ -41,22 +41,15 @@ These directories are target suggestions, not currently confirmed upstream paths
 ## Skill event mapping table
 Define data in a versioned table, e.g. `config/skill_action_mapping.csv`, with columns:
 
-`engine_action_key,engine_spell_or_attack_id,canonical_skill_id,skill_level_rule,knowledge_eligible,notes`
+`engine_action_key,engine_spell_or_attack_id,canonical_skill_id,knowledge_eligible,notes`
 
-Map an **observed action execution**, NOT a monster type. If action has native level, capture native verified value; otherwise map action ID + game difficulty / monster level using an explicitly reviewed rule. Version mapping in ruleset. Include at least one spell and one ordinary attack only if a valid learnable player skill counterpart exists. Do **not** add blanket mappings from monster sprite name to skills or fill unknown IDs with fabricated data.
+Map actual executed Computer action context to canonical Skill ID only (NOT monster type, bearer Skill Level or cast count); maintain per-spawn Skill ID SET. Unmapped actions ignored; don't fabricate IDs.
 
-Two-step aggregation:
-```
-executed monster action -> SkillUsedEvent (unique castId)
-  -> set of skill IDs used per specific computerSpawnId
-  -> on ComputerDeath, ONE knowledge credit per skill in the set
-  -> append same eligible credit/candidate to each current room party member's Pending
-```
-Replicated peers might see the same action; dedup by `(roomSessionId, computerSpawnId, castId)` before adding to per-kill set, then by `(roomSessionId, computerSpawnId, canonicalSkillId)` when awarding. Do NOT use monster type ID alone for computerSpawnId.
+Actually executed mapped action -> add Skill ID to Computer usedSkillIds SET. On kill: pre-Following party member gets Pending Learning +1 once per (roomSessionId,computerSpawnId,SkillId); others see candidate-only. Cast counts, missile counts, bearer Skill Levels not relevant.
 
 ## Misfire / Book / Momentum interception notes
 - Locate original Mana charge and spell release boundary; Misfire must be sampled once per attempted skill, Mana charged once even on failure, and original cooldown/action-lock timing unchanged. No double-roll on multiplayer echo or delayed animation callbacks.
-- Locate Book item-use handler. **Current frozen contract:** Lv1-only grant with immediate server persistence. **Under review, not yet approved:** preserve vanilla successful Book consumption and +1 true level per book (even at Lv1+). Either policy must commit item consumption and Knowledge atomically, outside combat Pending/Settlement; reject over-cap/full-30 actions safely.
+- Native Spell Book: consume1 and true Spell Level+1 up to native MaxSpellLevel via immediate atomic server item+Knowledge transaction. Books for other/new valid Skills allowed when Burden>=30; already-maxed SAME Spell's Book should not be wasted.
 - Mana recovery tick must be deterministic/robust to delta time; base natural rate stays zero; recovery only from Momentum or existing explicit effects. No intervention in speed frames / attacks.
 - Spell hotkey assignments act as **automatic** forget protection only; voluntary abandonment in Battle Settlement overrides protection. On acknowledged abandonment, clear memorized `SpellType::Spell` hotkeys and readied permanent learned-Spell reference only; **do not clear same-ID `SpellType::Scroll` / `SpellType::Charges` hotkeys**. Other spell-source shortcuts do not count as protection against automatic forgetting. Refresh spells/UI and prevent stale native save from restoring lost true level/progress/memorized Spell hotkeys. Capture hotkey change, actual skill use and UTC time safely; verify spell UI can show Following below Lv1 even if not castable.
 
@@ -68,7 +61,7 @@ Replicated peers might see the same action; dedup by `(roomSessionId, computerSp
 - New asset grants, pickup or loss are audited against Item Registry, not just static stats recomputed from a client-provided snapshot.
 
 ## Engineering guardrails
-- Retain upstream gameplay feel, animations, hit calculation, input, UI textures and networking. Instrumentation/event collection should be minimal and isolated.
+- Retain native combat, input/UI/items/network timing; normalize all HeroClass-dependent mechanical stats/growth/damage/weapon/Skill restrictions into one uniform classless ruleset; retain field for graphics/save.
 - Tests run headless on gameplay domain logic where possible; compare original-engine behavior before/after hooks.
 - Do not implement attack speed, spell cooldown or new inventory UI just to make Momentum/Burden work.
 - Code review every delta touching multiplayer serialization: mismatched client versions must not silently corrupt player save or item packets.

@@ -1,2 +1,2 @@
-engine_action_key,engine_spell_or_attack_id,canonical_skill_id,skill_level_rule,knowledge_eligible,notes
-# TODO: populated by Codex AFTER upstream audit; do not invent engine IDs or monster skill lists
+engine_action_key,engine_spell_or_attack_id,canonical_skill_id,knowledge_eligible,notes
+# Populated only from verified actually executed engine actions; not cast counts or bearer-level rules

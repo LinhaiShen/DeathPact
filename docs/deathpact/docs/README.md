@@ -2,7 +2,7 @@
 
 **Repository context:** This pack is the DeathPact V1 native-DevilutionX implementation specification inside the DevilutionX fork. The upstream engine files and existing upstream documentation are unchanged. These are proposed game extensions, not functionality already present in upstream; use this pack as the design reference for DeathPact tasks.
 
-**Frozen:** On skill abandonment during Settlement, previously spent Skill Points are not refunded.
+**Frozen:** each observed mapped Skill used by a killed Computer -> Learning +1 for eligible pre-Following Character regardless of casts; Book consumes one/true Level+1; Burden may exceed max BurdenCap30, new Skills allowed and Over-Burden/Misfire applies; HeroClass internal only, gameplay uniform; spent Skill Points never refunded on abandonment.
 
 Version: `V1-DRAFT-2026-10-10-REV1`  · Status: implementation-ready **at the boundary/invariant level**; tunable/open items explicitly listed.
 

@@ -14,7 +14,7 @@ Codex should complete one PR-sized milestone, test it, and report actual changed
 
 ## Phase 2 — Central persistence skeleton (single service)
 **Task P2-01**: Account auth, Character creation / login, public tag, status, revisioned committed save; DB migrations and ownership rules.
-**Task P2-02**: Item Registry + atomic item move; Loot Load ledger on direct Computer-drop pickup; book level-one transaction. Implement minimal central API client in desktop fork.
+**Task P2-02**: Item Registry + atomic item move; Loot Load ledger on direct Computer-drop pickup; Book use as an immediate atomic item-consumption/Knowledge transaction (current Lv1 grant; OPEN-09 +1-level-per-Book proposal awaits owner confirmation). Implement minimal central API client in desktop fork.
 **Task P2-03**: Native Save adapter for attributes, level, inventory, equipment, stash; build manifest/hash checkpoints (login, entering combat zone, settlement, reconnect). Clearly label security limits.
 **Acceptance:** stale revision, forged item ID, duplicate save request and concurrent pickup rejected; saved character restorable; changing local Pending Knowledge cannot push it via Native Save.
 
@@ -27,7 +27,7 @@ Codex should complete one PR-sized milestone, test it, and report actual changed
 ## Phase 4 — Burden, Momentum, forgetting / hotkeys
 **Task P4-01**: Compute union of Following/ Learned distinct skills, MAG-invested cap config; integrate one Misfire roll per legitimate learned-skill cast, charge Mana once, suppress effect.
 **Task P4-02**: Global Momentum increases with configured valid combat, regenerates Mana; baseline natural Mana regen=0, outside-combat decay and settlement reset. Leave native action speed untouched.
-**Task P4-03**: Hook existing Spell Hotkey slots to protect learned skills from time-based automatic forgetting; implement **Settlement-only** voluntary abandonment action and clear all hotkeys of abandoned skills on commit (even protected ones). Do not expose forgetting outside Settlement. Ensure Book grants only Lv1 through server immediate transaction.
+**Task P4-03**: Hook existing memorized-Spell Hotkey slots to protect learned skills from time-based automatic forgetting; implement **Settlement-only** voluntary abandonment and clear only learned `SpellType::Spell` hotkeys/readied learned Spell on commit; preserve Scroll/Charges hotkeys with the same SpellID. Do not expose forgetting outside Settlement. Book is currently Lv1-only by KN-06; OPEN-09 proposes restoring vanilla +1 level per consumed Book, requiring owner approval and the same immediate server-atomic item/Knowledge transaction.
 **Acceptance:** Burden formulas; no side effects on vanilla cast frame rate, scroll/staff (until policy decided), damage/VFX when Misfire; multi-day clock tests and Hotkey protection against automatic forgetting; 30 max, ability to abandon one at Settlement and then acquire a new skill; no restoration of abandoned data.
 
 ## Phase 5 — Multiplayer social/lobby and shared progression

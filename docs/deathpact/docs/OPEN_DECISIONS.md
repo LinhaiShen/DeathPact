@@ -15,9 +15,11 @@ This document distinguishes `FROZEN`, `PROPOSED`, and `OPEN`. Implement tests of
 | `mana.base_natural_regen_per_second` | **0 FROZEN** | native potions can still recover |
 | `knowledge.max_credit_per_computer_skill_kill` | **1 FROZEN** | effective cast events deduped |
 | `knowledge.group_reward` | **all active party members FROZEN** | same kill candidate, own Follow state |
-| `spellbook.max_level_granted` | **Lv1 FROZEN** | no level gain at Lv1+ |
+| `spellbook.max_level_granted` | **Lv1 FROZEN; change under review** | Existing baseline only. PROPOSED alternative in OPEN-09: vanilla one Book consumed per +1 true level, including Lv1+; not yet approved |
 | `forget.manual_only_in_settlement` | **true FROZEN** | voluntary abandonment only inside Battle Settlement, never a standalone forget action |
-| `forget.abandon_resets_to_level` | **0 FROZEN** | remove Follow, true Learned Level and all learning progress; clear hotkeys and Burden |
+| `forget.abandon_resets_to_level` | **0 FROZEN** | remove Follow, true Learned Level, learning progress, memorized-Spell hotkeys and Burden; leave independent Scroll/Staff hotkeys |
+| `class.internal_hero_class_retained` | **true FROZEN** | native `_pClass` remains valid; do not remove it |
+| `class.equipment_and_skill_gate` | **none FROZEN** | internal HeroClass does not restrict equipment type or skill access; ordinary stat/item requirements remain |
 | `loot.daily_reset` | **UTC 00:00 FROZEN** | character level |
 | `loot.limit`, `loot.weights` | **200; Normal1 Magic3 Unique10** | explicitly *initial values to balance* |
 | `hardcore.equipped_drop_fraction` | **0.65 FROZEN** | random round; server chooses; eligible co-present HC only |
@@ -35,8 +37,8 @@ This document distinguishes `FROZEN`, `PROPOSED`, and `OPEN`. Implement tests of
 
 | OPEN-07 | Momentum gain trigger, max, decay delay/shape, Mana Recovery curve | Config hooks; test zero baseline and settlement reset; no arbitrary temporary rates shipped as final |
 | OPEN-08 | Misfire applicability to Scroll, Staff Charges, original innate/class skills | Intercept permanent learned Knowledge casting only as safe default; document original behavior until reviewed |
-| OPEN-09 | Book consumed or retained when already Lv1+; full-30 Book action and immediate online commit recovery | Block level increase; use transactional item+knowledge change; UI must not silently waste a book without explicit product decision |
-| OPEN-10 | Classless character starting stats/visual, starting loadout/spell, original profession-dependent quirks | Audit and present smallest change proposal; do not invent starting class |
+| OPEN-09 | **Owner is considering restoring the original Book mechanism:** consume one Book and gain one additional true spell level on each successful read, including above Lv1. Confirm replacement of KN-06 Lv1-only rule, max-level handling, full-30 behavior and failure/commit recovery | **PROPOSED, NOT FROZEN:** support one-level-per-Book immediate item+Knowledge server transaction; cap by original valid level and 30 distinct Knowledge skills; prefer reject-without-consumption on cap/no level gain. Retain present Lv1-only behavior until confirmed |
+| OPEN-10 | Internal `HeroClass` and `_pClass` are retained, with **no class eligibility gate** on equippable item types or learnable/usable skills (FROZEN). Still undecided: internal class value/appearance, starting stats/loadout, whether original class-specific damage/handedness/innate skills and stat caps should be unified | Audit class-specific engine behavior; preserve existing formulas pending explicit decisions, never infer new eligibility bans |
 | OPEN-11 | Hardcore death drop asset count rounding policy | Proposed stochastic rounding (expectation 65%); needs sample-value tests; note 65% exact is impossible for small counts |
 | OPEN-12 | Death Pact buffs, Life drain rate, irrevocable server deadline, interaction with immunity/shields | Keep config/fixtures; always enforce death once Pact registered |
 | OPEN-13 | Runtime handling of a server outage/forced disconnection during play | Fail closed on irreversible mutations; document possible local Pending loss; no silent rollback of server-final state |

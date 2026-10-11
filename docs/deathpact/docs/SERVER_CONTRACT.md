@@ -9,7 +9,7 @@ This is a **proposed** transport/domain contract; route names are not existing D
 | Movement/monster/combat | DevilutionX peers | no combat server authority | original networking |
 | Account, Character identity, lobby, mode | Central | DB | authenticated calls |
 | Stats, level, XP, inventory, equipment, stash | Original client during play | Central committed save+ledger | native Save + high-value mutation events |
-| Spell Book Lv1 result | Original item-use + sync adapter | DB Knowledge and item state | independent immediate Book use transaction |
+| Spell Book level result (currently Lv1-only, OPEN-09 proposal to use native +1 per Book) | Original item-use + sync adapter | DB Knowledge and item state | independent immediate atomic Book-consumption + level transaction; no combat Settlement |
 | Kill-based skill discovery/progress and allocated Skill Points | Local Pending | DB committed Knowledge | **Battle Settlement only** |
 | Following choices and deliberate skill abandonment | Settlement UI/Pending | DB committed Follow / Knowledge | **Battle Settlement only** |
 | Momentum / combat-time Mana recovery | local live engine | no independent DB requirement | reset on Settlement; no mutation authority |
@@ -28,7 +28,7 @@ Character(id, accountId, name, publicTag, mode[Normal|Hardcore], status[Alive|Pa
           saveRevision, knowledgeRevision, equipmentSnapshotRevision, roomId, buildVersion)
 KnowledgeSkill(characterId, skillId, learnedLevel, following, learningPoints,
                lastUsedAtUtc, lastSlotSeenAtUtc, isFading, updatedAt)
-SpellHotkey(characterId, hotkeyIndex, skillId)
+SpellHotkey(characterId, hotkeyIndex, spellId, spellType[Spell|Skill|Scroll|Charges])
 SkillPointLedger(characterId, awarded, committedSpent)
 Room(id, creatorAccountId, mode, visibility, status, lastHeartbeatAt)
 RoomMember(roomId, characterId, joinedAt, leftAt, role)
@@ -90,7 +90,7 @@ Server recomputes legal attribute-point budget and derived equipment stats (rath
   "pointAllocations": [{"skillId": "firebolt", "points": 2}]
 }
 ```
-Required validation: signed-in Character, correct room/mode and known session; dedup `(roomSessionId, computerSpawnId, skillId)`; skill mapping exists; sane levels and bounds; current Follow/skill capacity; available unspent Skill Points; expected revision and duplicate IDs. `abandonSkillIds` must be distinct IDs already Following or Learned, and cannot overlap with `followChoices` or `pointAllocations`. **In the same atomic Knowledge transaction**, delete abandoned skills' Follow/level/committed and pending progress, clear Fading state and all Spell Hotkey references, and remove them from Burden/30-cap counting; discard any associated credit claims from that Settlement. Recalculate the 30-skill limit using the post-abandonment candidate set, so 30→29→30 is valid. Never refund any previously committed Skill Points spent on abandoned skills (`FROZEN`); preserve historical spend ledger and unspent-point balance across Settlement retries, Native Save, and re-learning. On retry, return exactly the previously committed outcome and never resurrect dropped progress/hotkeys. Server **cannot prove kills were real**: explicitly record low trust in audit; optional same-room peer digests add weak cross-checks only.
+Required validation: signed-in Character, correct room/mode and known session; dedup `(roomSessionId, computerSpawnId, skillId)`; skill mapping exists; sane levels and bounds; current Follow/skill capacity; available unspent Skill Points; expected revision and duplicate IDs. `abandonSkillIds` must be distinct IDs already Following or Learned, and cannot overlap with `followChoices` or `pointAllocations`. **In the same atomic Knowledge transaction**, delete abandoned skills' Follow/level/committed and pending progress, clear Fading state and memorized learned-Spell (`spellType=Spell`) Hotkey references / active readied learned Spell only (preserve same-spell Scroll/Charges hotkeys), and remove them from Burden/30-cap counting; discard any associated credit claims from that Settlement. Recalculate the 30-skill limit using the post-abandonment candidate set, so 30→29→30 is valid. Never refund any previously committed Skill Points spent on abandoned skills (`FROZEN`); preserve historical spend ledger and unspent-point balance across Settlement retries, Native Save, and re-learning. On retry, return exactly the previously committed outcome and never resurrect dropped progress/hotkeys. Server **cannot prove kills were real**: explicitly record low trust in audit; optional same-room peer digests add weak cross-checks only.
 
 Server result includes `settlementId`, `CommittedKnowledgeRevision`, committed Follow/level/progress, **abandonedSkillIds, clearedHotkeyIndices**, skill points consumed, and `resetMomentum: true`. Record transaction before acknowledgement. If client crashes after send, `GET_SETTLEMENT_STATUS(settlementId)` returns durable result; never allow cancel after acceptance. If rejected, return reason and deterministic retry policy.
 

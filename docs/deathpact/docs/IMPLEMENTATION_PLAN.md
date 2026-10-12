@@ -13,7 +13,7 @@ Codex should complete one PR-sized milestone, test it, and report actual changed
 **Acceptance:** repeated Computer cast 1/10/100 times yields Learning +1 on kill, only for pre-Following Character; CurBurden 30->31->32 legal Over-Burden/Misfire capped50%; Book may acquire new Skill at Burden30+. Internal HeroClasses use identical rules; abandonment does not refund Points.
 
 ## Phase 2 — Central persistence skeleton (single service)
-**Task P2-01**: Account auth, Character creation / login, public tag, status, revisioned committed save; DB migrations and ownership rules.
+**Task P2-01**: Account auth and **globally unique public Account `Name#Tag`** (`publicName`, `publicTag`, initial random three-digit Tag with collision retry); private per-Character names/selection, committed Character save, account ownership, status/revisions and DB migrations. No public Character tag. APIs distinguish own-character details from public Account identity.
 **Task P2-02**: Item Registry and atomic transfers, UTC Loot Load, native Book consume-one/true Level+1 as immediate server transaction; other/new Skills allowed at Burden>=30. Deny ineffective already-maxed same-Spell book only.
 **Task P2-03**: Native Save adapter for attributes, level, inventory, equipment, stash; build manifest/hash checkpoints (login, entering combat zone, settlement, reconnect). Clearly label security limits.
 **Acceptance:** stale revision, forged item ID, duplicate save request and concurrent pickup rejected; saved character restorable; changing local Pending Knowledge cannot push it via Native Save.
@@ -31,9 +31,9 @@ Codex should complete one PR-sized milestone, test it, and report actual changed
 **Acceptance:** Burden/Misfire soft cap despite CurrentBurden>30, no native attack timing changes, Hotkey protection and Scroll/Charges independence, Book/Follow acquisition at Burden30+, no refund after abandonment.
 
 ## Phase 5 — Multiplayer social/lobby and shared progression
-**Task P5-01**: Friends, public/private/friend room lists, invites, online status, chat; original TCP/ZeroTier session bridge with tests for join-in-progress and role.
+**Task P5-01**: Account-based Friends, public/private/friend room list, invites, online status and chat; every peer-facing label uses **Account `Name#Tag`**, including native room/party/in-game overlays and Hardcore Legacy owner/Hall of Fame. Character names remain owner-only. Audit native DevilutionX hero name serialization/UI and test 2/4-player sessions for private-name leakage; keep stable `characterId` internally.
 **Task P5-02**: Enforce room cap 4; Normal/Hardcore mode separation. Set server room creator lifecycle; on host termination close room, cancel/unclaim allowed HC death-loot pickups.
-**Acceptance:** both existing transport modes behave as documented; no cross-mode party; active party receives same kill candidate.
+**Acceptance:** both existing TCP/ZeroTier transports behave as documented, no cross-mode party and correct kill credit; each Account's own character selector shows its Character privateName, while other Accounts see only unique public Account `Name#Tag` in roster, game, chat, invitations, legacy provenance and public rankings. Character names never leak through peer-visible name fields/messages.
 
 ## Phase 6 — Hardcore / Death Pact / Legacy
 **Task P6-01**: Add Hardcore Character irreversible dead-state transition and server-chosen equipment sample; complete item destruction, legacy provenance, eligible room-member pickup after ACK.

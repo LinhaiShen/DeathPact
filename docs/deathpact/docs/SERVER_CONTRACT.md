@@ -22,8 +22,8 @@ Do not allow a native save containing changed spell fields to silently overwrite
 ## 2. Suggested entities and invariants
 
 ```
-Account(id, emailHashOrAddress, authFields, createdAt)
-Character(id, accountId, name, publicTag, mode[Normal|Hardcore], status[Alive|PactActive|Dead],
+Account(id, publicName, publicTag, emailHashOrAddress, authFields, createdAt)
+Character(id, accountId, privateName, mode[Normal|Hardcore], status[Alive|PactActive|Dead],
           level, xp, str, mag, dex, vit, allocatedMagPoints,
           saveRevision, knowledgeRevision, equipmentSnapshotRevision, roomId, buildVersion)
 KnowledgeSkill(characterId, skillId, learnedLevel, following, learningPoints,
@@ -31,12 +31,12 @@ KnowledgeSkill(characterId, skillId, learnedLevel, following, learningPoints,
 SpellHotkey(characterId, hotkeyIndex, spellId, spellType[Spell|Skill|Scroll|Charges])
 SkillPointLedger(characterId, awarded, committedSpent)
 Room(id, creatorAccountId, mode, visibility, status, lastHeartbeatAt)
-RoomMember(roomId, characterId, joinedAt, leftAt, role)
+RoomMember(roomId, characterId, joinedAt, leftAt, role)  // internally resolve accountId; peer display only Account publicName#publicTag
 PendingSession(characterId, roomSessionId, ephemeralClaimDigest, localState)
 Settlement(id, characterId, roomSessionId, requestId, preKnowledgeRevision,
            state[Received|Committed|Rejected|Recovering], requestDigest, resultDigest, createdAt)
 ItemRegistry(itemId, itemType, generationParameters, mode, originType, originContext,
-             itemState, currentCharacterId, roomId, registeredAt, revision, legacyOwnerTag,
+             itemState, currentCharacterId, roomId, registeredAt, revision, legacyOwnerAccountId, legacyOwnerTag,
              legacyDeathLevel, legacyDeathTime)
 ItemOperation(requestId, itemId, sourceState, destState, preRevision, result, occurredAt)
 LootUsage(characterId, utcDate, used)
@@ -49,11 +49,18 @@ PactActivation(characterId UNIQUE, requestId, activatedAtUtc, inevitableDeathAtU
 AuditEvent(id, actionType, subjectId, reasonCode, observedAtUtc, sanitizedMetadata)
 ```
 
-Use relational foreign keys, unique `(characterId, skillId)` and unique mutation IDs; one registered item can have exactly one active placement/owner. Apply one neutral gameplay ruleset regardless of internal HeroClass; no 30-distinct-Skill hard limit. The game may need more vanilla fields than shown: keep versioned opaque, validated native-save payload **in addition to normalized key fields**, not instead of original data.
+Enforce **unique Account `(publicName, publicTag)`** (the displayed `Name#Tag`); generate initial three-digit Tag with collision retry, keeping the Tag field extensible. **Do not create a public Character tag or require globally unique private Character names.** Public API/room/chat/party/leaderboard payloads expose Account `Name#Tag` only; authenticated owning-Account Character management may return `privateName`, while internal operations use opaque `characterId` and authenticated account ownership. Native DevilutionX peer-visible name must not be populated with `privateName`. Use relational foreign keys, unique `(characterId, skillId)` and unique mutation IDs; one registered item can have exactly one active placement/owner. Apply one neutral gameplay ruleset regardless of internal HeroClass; no 30-distinct-Skill hard limit. The game may need more vanilla fields than shown: keep versioned opaque, validated native-save payload **in addition to normalized key fields**, not instead of original data.
 
 `Committed Character` (and equipment snapshot) is authoritative when logging in; a local cache is never a new source of truth.
 
 ## 3. Proposed boundary commands (conceptual JSON)
+
+### 3.0 Public identity and private Character presentation
+
+- `Account.publicName` + `Account.publicTag` form the unique public `Name#Tag`. Account-level friends, invitations, chat, room roster, in-room native player label and public Death Pact Hall of Fame display this label, **never `Character.privateName`**.
+- An Account's authenticated character selector/details may display the owner's `Character.privateName`, and all Character-bound mutations use `characterId` with account ownership verification; the name itself is not required to be globally unique.
+- Native multiplayer may have a shared hero-name/display field. Map it to the owning Account's public `Name#Tag` for other peers; never serialize the private Character name into peer-visible labels or peer-visible payloads. Validate UI and network surfaces in multiplayer smoke tests.
+- Legacy drops store original owner `accountId` and a public Account `Name#Tag` snapshot for stable visible attribution; retain private deceased `characterId` internally for death/asset uniqueness.
 
 ### 3.1 Native character save
 ```json
@@ -139,7 +146,7 @@ Server first persists one-time Pact state + unavoidable server-side death deadli
 - Device local file timestamps are not authoritative. UTC daily Loot Load credited via server receipt/issued reservation token. Retry returns stored exact result for the same `requestId`; same ID + changed payload is rejected.
 - All item operations use unique one-location invariant and DB locks/serializable claim, not just mutable in-memory JS state.
 - On network failure: client clearly shows Pending/Not Committed. No fake success. Death Pact, settlement finalization, registered loot minting and item ownership transfer need server acknowledgements.
-- To avoid leaking personal email, use public `CharacterName#Tag` and opaque IDs outside authenticated account admin features.
+- **Public identity is Account `Name#Tag`**, not `CharacterName#Tag`. Never expose Account email or private Character names to other Accounts in room/player/party/chat/invite/legacy-item labels or public leaderboard; only the owning Account's authenticated Character management pages may display `privateName`. Central state and inventory/history continue to use opaque `characterId`. Render original owning **Account** `Name#Tag` for Legacy provenance without exposing the Character name.
 
 ## 5. Security capability statement
 Server can validate **schema, level/stat budget, item generation plausibility, ownership uniqueness, quotas, correct published ruleset, allowed transitions and idempotency**. With player-hosted non-authoritative combat, it **cannot verify** true monster kill, drop provenance, actual Hardcore death, or that an unmodified process ran between hash checkpoints. This is V1 risk acceptance. Do not imply file checksum, multi-peer signatures, deterministic-looking RNG seeds or a local replay are reliable anti-cheat proofs.
